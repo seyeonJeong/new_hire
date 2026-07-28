@@ -20,3 +20,5 @@
 | `policies/SEC-001-data-sharing.md` | 자료 공유·외부 전달 규정 |
 | `policies/EXP-001-expense-approval.md` | 비용·구매 승인 규정 |
 | `policies/RPT-001-reporting.md` | 보고·문제 대응 규정 |
+| `subtopics.json` | 세부 토픽·Trigger (데모용) |
+| `generated/` | LLM 생성 시나리오 (draft) |
