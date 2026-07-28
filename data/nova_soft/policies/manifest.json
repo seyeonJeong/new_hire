@@ -1,0 +1,60 @@
+[
+  {
+    "organization_id": "nova-soft",
+    "document_id": "SEC-001",
+    "title": "자료 공유 및 외부 전달 지침",
+    "department": "정보보호팀",
+    "policy_category": "data_sharing",
+    "topic": "data_sharing",
+    "version": "1.0",
+    "effective_date": "2026-01-01",
+    "confidentiality": "internal",
+    "path": "SEC-001-data-sharing.md",
+    "is_active": true,
+    "key_sections": [
+      "4.2 외부 전달 승인",
+      "4.3 금지 행위",
+      "4.4 개인정보·고객데이터",
+      "5. 승인자가 부재한 경우"
+    ]
+  },
+  {
+    "organization_id": "nova-soft",
+    "document_id": "EXP-001",
+    "title": "비용처리 및 승인 규정",
+    "department": "재무팀",
+    "policy_category": "expense_approval",
+    "topic": "expense_approval",
+    "version": "1.0",
+    "effective_date": "2026-01-01",
+    "confidentiality": "internal",
+    "path": "EXP-001-expense-approval.md",
+    "is_active": true,
+    "key_sections": [
+      "3. 승인권한",
+      "4.4 긴급 구매·선결제",
+      "5. 증빙",
+      "6. 승인자 부재 시 절차",
+      "7. 금지 행위"
+    ]
+  },
+  {
+    "organization_id": "nova-soft",
+    "document_id": "RPT-001",
+    "title": "보고 및 문제 대응 절차",
+    "department": "프로젝트관리팀",
+    "policy_category": "reporting",
+    "topic": "reporting",
+    "version": "1.0",
+    "effective_date": "2026-01-01",
+    "confidentiality": "internal",
+    "path": "RPT-001-reporting.md",
+    "is_active": true,
+    "key_sections": [
+      "3. 보고 시점",
+      "4. 보고 경로",
+      "5. 담당자 부재 시",
+      "6. 금지 행위"
+    ]
+  }
+]

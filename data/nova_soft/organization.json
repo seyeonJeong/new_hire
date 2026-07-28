@@ -1,0 +1,21 @@
+{
+  "organization_id": "nova-soft",
+  "name": "NOVA Soft",
+  "industry": "SI",
+  "department": "AI AX팀",
+  "target_role": "AI AX팀 신입사원",
+  "departments": [
+    "AI AX팀",
+    "정보보호팀",
+    "재무팀",
+    "프로젝트관리팀"
+  ],
+  "roles": [
+    "신입사원",
+    "팀장",
+    "본부장",
+    "지정 대체 승인자",
+    "외부 협력사",
+    "고객사 담당자"
+  ]
+}

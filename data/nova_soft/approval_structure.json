@@ -1,0 +1,23 @@
+[
+  {
+    "process": "외부 자료 전달",
+    "primary_approver": "팀장",
+    "backup_approver": "본부장 또는 사전 지정 대리자",
+    "review_department": "정보보호팀",
+    "emergency_exception": false
+  },
+  {
+    "process": "비용 집행 및 구매",
+    "primary_approver": "팀장",
+    "backup_approver": "사전 지정 대체 승인자",
+    "review_department": "재무팀",
+    "emergency_exception": false
+  },
+  {
+    "process": "장애·사고·고객 이슈 보고",
+    "primary_approver": "팀장",
+    "backup_approver": "본부장 또는 당직/대체 보고 라인",
+    "review_department": "프로젝트관리팀",
+    "emergency_exception": false
+  }
+]
