@@ -12,12 +12,15 @@ dependencies = [
   "openai>=1.40.0",
   "pydantic>=2.7.0",
   "python-dotenv>=1.0.0",
+  "fastapi>=0.115.0",
+  "uvicorn[standard]>=0.30.0",
 ]
 
 [project.scripts]
 newhire-generate = "newhire.generate:main"
 newhire-validate = "newhire.validate:main"
 newhire-repair = "newhire.repair:main"
+newhire-api = "newhire.api:run"
 
 [tool.setuptools.packages.find]
 where = ["src"]

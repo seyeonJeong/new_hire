@@ -1,6 +1,6 @@
 # Newhire
 
-정책 기반 신입 온보딩·상황판단(SJT) 플랫폼.
+신입사원 역량 평가 에이전트.
 
 ## Demo data
 
@@ -38,3 +38,27 @@ python -m newhire.repair --in data/nova_soft/generated/batch_20260728T014723Z.js
 # 실제 수리 (최대 2라운드)
 python -m newhire.repair --in data/nova_soft/generated/batch_20260728T014723Z.jsonl --max-rounds 2
 ```
+
+## API (MVP)
+
+```bash
+source .venv/bin/activate
+pip install -e .
+uvicorn newhire.api:app --reload --port 8000
+```
+
+- `GET /health`
+- `GET /scenarios/next` — 다음 문제 (정답 필드 제외)
+- `POST /scenarios/{scenario_id}/submit` — `{ "choice_id": "B" }` 제출·채점
+- 문서: http://127.0.0.1:8000/docs
+
+## Web UI (MVP)
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+브라우저: http://127.0.0.1:5173  
+API(`:8000`)가 켜져 있어야 합니다.
