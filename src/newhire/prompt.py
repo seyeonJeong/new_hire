@@ -123,3 +123,102 @@ def build_user_prompt(
 correct 보기에 조항 번호·절차를 길게 나열하지 마세요.
 subtopic 값은 "{subtopic["id"]}" 로 고정하세요.
 """
+
+
+REPAIR_SYSTEM_PROMPT = """\
+당신은 대기업 SI 신입사원 온보딩용 SJT 문항 수정자입니다.
+기존 시나리오 JSON과 품질 이슈 목록을 보고, 이슈를 해소한 새 JSON 1건만 작성합니다.
+
+규칙:
+1. 한국어로 작성한다.
+2. 출력은 JSON 객체 하나만. 마크다운/해설 금지.
+3. 반드시 아래 필드를 모두 포함한 완전한 JSON을 출력한다:
+   scenario_id, organization, target_role, topic, subtopic, difficulty,
+   primary_competency, scenario, question, choices, correct_choice_id,
+   rationale(correct/unsafe/partial), required_actions, prohibited_actions,
+   policy_ref(policy_id + sections), meta(version/status)
+4. topic, subtopic, policy_ref.policy_id, scenario_id는 입력값을 유지한다.
+5. choices는 A/B/C 3개, label은 unsafe/partial/correct 각 1개.
+6. correct_choice_id는 label=correct인 choice의 id와 일치해야 한다.
+7. 질문·보기·시나리오 본문에 unsafe/partial/correct, 정답/오답, SEC|EXP|RPT-번호, 조항번호(예: 4.2)를 넣지 않는다.
+8. 세 보기 텍스트 길이를 비슷하게 맞춘다. correct만 절차를 길게 나열하지 않는다.
+9. 이슈에 target_correct_choice_id가 있으면 그 id가 correct가 되게 작성한다.
+10. meta.status는 "draft", meta.version은 "v0.1".
+11. 기존 문항의 좋은 설정(인물·압력)은 유지하되, 이슈 해결을 위해 보기/표현은 바꿔도 된다.
+12. rationale, required_actions, prohibited_actions, policy_ref.sections를 절대 생략하지 않는다.
+"""
+
+
+def build_repair_user_prompt(
+    *,
+    organization: dict[str, Any],
+    policy_id: str,
+    policy_text: str,
+    subtopic: dict[str, Any],
+    old_scenario: dict[str, Any],
+    issue_lines: list[str],
+    scenario_id: str,
+    target_correct_choice_id: str | None = None,
+) -> str:
+    org_block = {
+        "id": organization["organization_id"],
+        "name": organization["name"],
+        "industry": organization["industry"],
+        "department": organization["department"],
+        "target_role": organization["target_role"],
+    }
+    issues_bullet = "\n".join(f"- {line}" for line in issue_lines)
+    if target_correct_choice_id:
+        issues_bullet += (
+            f"\n- [repair] target_correct_choice_id: {target_correct_choice_id}"
+        )
+    required_fields = [
+        "scenario_id",
+        "organization",
+        "target_role",
+        "topic",
+        "subtopic",
+        "difficulty",
+        "primary_competency",
+        "scenario",
+        "question",
+        "choices",
+        "correct_choice_id",
+        "rationale",
+        "required_actions",
+        "prohibited_actions",
+        "policy_ref",
+        "meta",
+    ]
+    return f"""\
+## 조직
+{json.dumps(org_block, ensure_ascii=False, indent=2)}
+
+## 세부 토픽 (유지)
+- subtopic id: {subtopic["id"]}
+- title: {subtopic.get("title", "")}
+- trigger: {subtopic.get("trigger", "")}
+- conflict: {subtopic.get("conflict", "")}
+
+## 내규 전문 ({policy_id})
+{policy_text}
+
+## 기존 시나리오 (참고)
+{json.dumps(old_scenario, ensure_ascii=False, indent=2)}
+
+## 품질 이슈 (반드시 해결)
+{issues_bullet}
+
+## 필수 출력 필드
+{json.dumps(required_fields, ensure_ascii=False)}
+- rationale: {{"correct": "...", "unsafe": "...", "partial": "..."}}
+- required_actions: ["...", "..."]
+- prohibited_actions: ["...", "..."]
+- policy_ref: {{"policy_id": "{policy_id}", "sections": ["4.2", "..."]}}
+
+## 수정 지시
+- 위 이슈를 모두 반영한 **완전한** 시나리오 JSON 1건을 작성하세요.
+- 필드를 생략하지 마세요. 기존 시나리오에 있던 rationale/actions/policy_ref는 필요 시 수정·유지하세요.
+- scenario_id는 "{scenario_id}" 로 유지하세요.
+- subtopic은 "{subtopic["id"]}" 로 유지하세요.
+"""

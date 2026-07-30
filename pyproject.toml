@@ -16,6 +16,8 @@ dependencies = [
 
 [project.scripts]
 newhire-generate = "newhire.generate:main"
+newhire-validate = "newhire.validate:main"
+newhire-repair = "newhire.repair:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
