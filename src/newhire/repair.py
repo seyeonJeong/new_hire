@@ -84,7 +84,7 @@ def build_repair_plan(
     for issue in issues:
         if issue.code != "near_duplicate":
             continue
-        # message like: "NOVA-AX-DS-001 ~ NOVA-AX-DS-002 jaccard=0.90 ..."
+        # message like: "OO-AX-DS-001 ~ OO-AX-DS-002 jaccard=0.90 ..."
         parts = issue.message.split("~")
         if len(parts) < 2:
             continue
@@ -255,7 +255,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--org",
         type=Path,
-        default=root / "data" / "nova_soft",
+        default=root / "data" / "oo_soft",
     )
     parser.add_argument(
         "--subtopics",

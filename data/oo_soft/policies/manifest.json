@@ -1,6 +1,6 @@
 [
   {
-    "organization_id": "nova-soft",
+    "organization_id": "oo-soft",
     "document_id": "SEC-001",
     "title": "자료 공유 및 외부 전달 지침",
     "department": "정보보호팀",
@@ -19,7 +19,7 @@
     ]
   },
   {
-    "organization_id": "nova-soft",
+    "organization_id": "oo-soft",
     "document_id": "EXP-001",
     "title": "비용처리 및 승인 규정",
     "department": "재무팀",
@@ -39,7 +39,7 @@
     ]
   },
   {
-    "organization_id": "nova-soft",
+    "organization_id": "oo-soft",
     "document_id": "RPT-001",
     "title": "보고 및 문제 대응 절차",
     "department": "프로젝트관리팀",

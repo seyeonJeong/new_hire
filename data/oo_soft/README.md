@@ -1,11 +1,11 @@
-# NOVA Soft
+# 00 Soft
 
 가상 기업 데이터. SI / AI AX팀 신입 온보딩용.
 
 | 항목 | 값 |
 |------|-----|
-| 회사명 | NOVA Soft |
-| organization_id | `nova-soft` |
+| 회사명 | 00 Soft |
+| organization_id | `oo-soft` |
 | 업종 | SI |
 | 부서 | AI AX팀 |
 | 대상 | AI AX팀 신입사원 |

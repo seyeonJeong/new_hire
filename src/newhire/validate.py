@@ -347,7 +347,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--subtopics",
         type=Path,
-        default=root / "data" / "nova_soft" / "subtopics.json",
+        default=root / "data" / "oo_soft" / "subtopics.json",
         help="subtopics.json for coverage checks",
     )
     parser.add_argument(

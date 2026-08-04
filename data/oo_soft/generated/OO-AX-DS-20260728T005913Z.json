@@ -1,8 +1,8 @@
 {
-  "scenario_id": "NOVA-AX-DS-001",
+  "scenario_id": "OO-AX-DS-001",
   "organization": {
-    "id": "nova-soft",
-    "name": "NOVA Soft",
+    "id": "oo-soft",
+    "name": "00 Soft",
     "industry": "SI",
     "department": "AI AX팀"
   },

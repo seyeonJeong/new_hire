@@ -6,7 +6,7 @@
 
 ```text
 data/
-└── nova_soft/
+└── oo_soft/
     ├── README.md
     ├── organization.json
     ├── approval_structure.json
@@ -29,7 +29,7 @@ python -m newhire.generate --count 20
 `--count 20`은 `subtopics.json`의 기본 비율(자료 8 / 비용 6 / 보고 6)로 세부 토픽을 돌아가며 생성합니다.
 
 ```bash
-python -m newhire.validate --in data/nova_soft/generated/batch_YYYYMMDD.jsonl
+python -m newhire.validate --in data/oo_soft/generated/batch_YYYYMMDD.jsonl
 ```
 
 ## Usage (now → later)

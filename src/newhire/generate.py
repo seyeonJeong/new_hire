@@ -67,7 +67,7 @@ def subtopics_for_topic(catalog: dict[str, Any], topic: str) -> list[dict[str, A
 def default_out_path(org_dir: Path, topic: str) -> Path:
     abbrev = TOPIC_ABBREV.get(topic, topic[:2].upper())
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return org_dir / "generated" / f"NOVA-AX-{abbrev}-{ts}.json"
+    return org_dir / "generated" / f"OO-AX-{abbrev}-{ts}.json"
 
 
 def default_batch_out_path(org_dir: Path) -> Path:
@@ -77,7 +77,7 @@ def default_batch_out_path(org_dir: Path) -> Path:
 
 def make_scenario_id(topic: str, index: int) -> str:
     abbrev = TOPIC_ABBREV.get(topic, topic[:2].upper())
-    return f"NOVA-AX-{abbrev}-{index:03d}"
+    return f"OO-AX-{abbrev}-{index:03d}"
 
 
 def build_batch_plan(
@@ -231,8 +231,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--org",
         type=Path,
-        default=root / "data" / "nova_soft",
-        help="Organization data directory (default: data/nova_soft)",
+        default=root / "data" / "oo_soft",
+        help="Organization data directory (default: data/oo_soft)",
     )
     parser.add_argument(
         "--topic",

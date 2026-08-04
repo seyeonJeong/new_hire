@@ -23,7 +23,7 @@ load_dotenv()
 DEFAULT_SCENARIO_FILE = (
     Path(__file__).resolve().parents[2]
     / "data"
-    / "nova_soft"
+    / "oo_soft"
     / "generated"
     / "batch_20260728T014723Z.repaired.jsonl"
 )

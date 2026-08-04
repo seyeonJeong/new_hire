@@ -4,7 +4,7 @@
 
 ## Demo data
 
-가상 기업 **NOVA Soft** 내규·조직 데이터: [`data/nova_soft/`](data/nova_soft/)
+가상 기업 **00 Soft** 내규·조직 데이터: [`data/oo_soft/`](data/oo_soft/)
 
 ## Scenario generation (v1)
 
@@ -16,12 +16,12 @@ python -m newhire.generate --count 20
 ```
 
 `.env`에 `OPENAI_API_KEY` 필요. 1건은 `generated/*.json`, 배치는 `generated/batch_*.jsonl`.
-세부 토픽: [`data/nova_soft/subtopics.json`](data/nova_soft/subtopics.json)
+세부 토픽: [`data/oo_soft/subtopics.json`](data/oo_soft/subtopics.json)
 
 ## Scenario validation
 
 ```bash
-python -m newhire.validate --in data/nova_soft/generated/batch_20260728T014723Z.jsonl
+python -m newhire.validate --in data/oo_soft/generated/batch_20260728T014723Z.jsonl
 ```
 
 - **error:** 보기 길이 불균형, 정답 누설, 필수/금지 행동 부실  
@@ -33,10 +33,10 @@ python -m newhire.validate --in data/nova_soft/generated/batch_20260728T014723Z.
 
 ```bash
 # 수리 계획만 확인
-python -m newhire.repair --in data/nova_soft/generated/batch_20260728T014723Z.jsonl --plan-only
+python -m newhire.repair --in data/oo_soft/generated/batch_20260728T014723Z.jsonl --plan-only
 
 # 실제 수리 (최대 2라운드)
-python -m newhire.repair --in data/nova_soft/generated/batch_20260728T014723Z.jsonl --max-rounds 2
+python -m newhire.repair --in data/oo_soft/generated/batch_20260728T014723Z.jsonl --max-rounds 2
 ```
 
 ## API (MVP)
