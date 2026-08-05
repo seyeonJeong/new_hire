@@ -15,6 +15,26 @@ export type ScenarioNext = {
   scenario: string
   question: string
   choices: PublicChoice[]
+  quiz_index: number
+  quiz_total: number
+}
+
+export type QuizStart = {
+  quiz_total: number
+  scenarios: ScenarioNext[]
+}
+
+export type FeedbackPayload = {
+  selected: string
+  correct: string
+  required_actions: string[]
+  prohibited_actions: string[]
+  next_tip?: string | null
+  policy_grounds?: string[]
+  followed?: string[]
+  missed?: string[]
+  analysis_summary?: string | null
+  source?: 'agent' | 'static'
 }
 
 export type SubmitResult = {
@@ -23,12 +43,26 @@ export type SubmitResult = {
   is_correct: boolean
   correct_choice_id: 'A' | 'B' | 'C'
   selected_label: 'unsafe' | 'partial' | 'correct'
-  feedback: {
-    selected: string
-    correct: string
-    required_actions: string[]
-    prohibited_actions: string[]
-  }
+  evaluation_id?: string | null
+  agent_label?: 'unsafe' | 'partial' | 'correct' | null
+  feedback: FeedbackPayload
+  quiz_index?: number | null
+  quiz_total?: number | null
+}
+
+export type EvaluationStatus = {
+  evaluation_id: string
+  scenario_id: string
+  choice_id: 'A' | 'B' | 'C'
+  status: 'pending' | 'running' | 'done' | 'error'
+  agent_label?: 'unsafe' | 'partial' | 'correct' | null
+  feedback?: FeedbackPayload | null
+  error?: string | null
+}
+
+export type AttemptRecord = {
+  scenario: ScenarioNext
+  result: SubmitResult
 }
 
 async function readError(res: Response): Promise<string> {
@@ -41,8 +75,8 @@ async function readError(res: Response): Promise<string> {
   }
 }
 
-export async function fetchNextScenario(): Promise<ScenarioNext> {
-  const res = await fetch('/scenarios/next')
+export async function startQuizPack(): Promise<QuizStart> {
+  const res = await fetch('/quiz/start', { method: 'POST' })
   if (!res.ok) throw new Error(await readError(res))
   return res.json()
 }
@@ -56,6 +90,12 @@ export async function submitChoice(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ choice_id: choiceId }),
   })
+  if (!res.ok) throw new Error(await readError(res))
+  return res.json()
+}
+
+export async function fetchEvaluation(evaluationId: string): Promise<EvaluationStatus> {
+  const res = await fetch(`/evaluations/${encodeURIComponent(evaluationId)}`)
   if (!res.ok) throw new Error(await readError(res))
   return res.json()
 }

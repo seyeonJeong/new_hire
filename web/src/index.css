@@ -247,12 +247,32 @@ button {
   color: var(--warn);
 }
 
+.feedback-source {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+}
+
 .feedback-body,
-.feedback-correct {
+.feedback-correct,
+.feedback-meta,
+.feedback-tip {
   margin: 0 0 10px;
   color: var(--ink-soft);
   font-size: 0.95rem;
   line-height: 1.65;
+}
+
+.feedback-meta {
+  font-size: 0.88rem;
+}
+
+.feedback-tip {
+  margin: 0 0 22px;
+  padding: 12px 0 0;
+  border-top: 1px dashed var(--line);
+  color: var(--ink);
 }
 
 .feedback-lists {
@@ -273,6 +293,49 @@ button {
   color: var(--ink-soft);
   line-height: 1.55;
 }
+
+.summary {
+  max-width: 680px;
+}
+
+.summary-list {
+  display: grid;
+  gap: 22px;
+  margin: 24px 0 28px;
+}
+
+.summary-card {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.summary-card h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.summary-card .ok {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.summary-card .bad {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.summary-q {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.agent-block {
+  margin-top: 8px;
+}
+
 
 .status,
 .status-block {
