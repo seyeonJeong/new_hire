@@ -165,6 +165,78 @@
       "trigger": "문제를 '깨끗이' 보이려고 로그·메시지를 정리하자는 제안",
       "conflict": "빠른 수습 vs 기록 보존·보고",
       "primary_competency_hint": "risk_awareness"
+    },
+    {
+      "id": "ds_internal_pricing_sharing",
+      "topic": "data_sharing",
+      "title": "내부 비용·견적 공유",
+      "trigger": "영업팀이나 파트너가 프로젝트 견적·내부 비용 원본 파일을 외부에 보내 달라고 요청함",
+      "conflict": "영업 협업·신속한 정보 제공 vs 내부 비용·견적의 기밀 유지 및 승인 절차 준수",
+      "primary_competency_hint": "risk_awareness"
+    },
+    {
+      "id": "ds_missing_delivery_record",
+      "topic": "data_sharing",
+      "title": "승인 후 전달 기록 누락",
+      "trigger": "팀장 승인을 받아 자료를 외부로 전달했으나 승인이력과 전달 시각을 기록하지 않았음을 뒤늦게 인지함",
+      "conflict": "업무 속도 및 번거로움 최소화 vs 승인 기록·추적을 통한 규정 준수 및 사고대응 준비",
+      "primary_competency_hint": "policy_application"
+    },
+    {
+      "id": "ds_uncertain_data_classification",
+      "topic": "data_sharing",
+      "title": "자료 민감도 불확실성",
+      "trigger": "요청된 파일에 개인정보·고객데이터 포함 여부가 명확하지 않아 자체 판단이 어려움",
+      "conflict": "일단 자료를 제공해 업무 지연 방지 vs 정보보호팀에 사전 문의하여 안전성 확인 후 전달",
+      "primary_competency_hint": "escalation"
+    },
+    {
+      "id": "ea_new_vendor_upfront",
+      "topic": "expense_approval",
+      "title": "신규 벤더 고액 즉시 결제 요청",
+      "trigger": "프로젝트 일정상 신규 벤더와 즉시 계약·결제해야 한다는 요청이 들어옴",
+      "conflict": "빠른 계약·납기 준수 vs 팀장 + 재무의 동시 확인과 절차 준수",
+      "primary_competency_hint": "escalation"
+    },
+    {
+      "id": "ea_use_others_corporate_card",
+      "topic": "expense_approval",
+      "title": "동료 법인카드·계정 대체 사용 제안",
+      "trigger": "결제 권한 또는 법인카드가 없을 때 동료가 자신의 법인카드나 계정으로 대신 결제하자고 제안함",
+      "conflict": "결제 편의·신속 처리 vs 타인 카드·계정 우회 결제 금지에 따른 규정 준수",
+      "primary_competency_hint": "risk_awareness"
+    },
+    {
+      "id": "ea_inadequate_evidence_submission",
+      "topic": "expense_approval",
+      "title": "공식 증빙 미발급·스크린샷만 수령",
+      "trigger": "벤더가 영수증 스크린샷이나 간단한 확인서만 줬고 세금계산서·공식 영수증 발급이 지연됨",
+      "conflict": "정산 기한 맞춰 신속 처리 vs 공식 증빙 제출 의무 및 불충분 증빙으로 인한 반려·징계 위험",
+      "primary_competency_hint": "communication"
+    },
+    {
+      "id": "rp_minimum_report_content",
+      "topic": "reporting",
+      "title": "보고 내용 최소요건 누락",
+      "trigger": "이슈를 인지했으나 급하게 간단히 전달하려고 발생시각·영향범위·현재까지 확인한 사실 등 정책의 최소 보고 항목을 생략한 채 간단히 보고하려 함",
+      "conflict": "빠르게 상황을 전달하여 즉시 대응 착수시키기 vs 정책에서 정한 최소 보고 내용(발생시각·영향범위·확인 사실 등)을 충족해야 함",
+      "primary_competency_hint": "policy_application"
+    },
+    {
+      "id": "rp_underestimate_impact",
+      "topic": "reporting",
+      "title": "영향 과소평가로 보고 보류",
+      "trigger": "신입이 문제를 발견했으나 고객 영향이 크지 않을 것이라 판단하여 보고를 미루려 함",
+      "conflict": "과도한 경보와 불필요한 업무 부담을 피하려는 판단 vs 잠재적 고객·일정·비용 영향 가능성으로 인지 즉시 보고해야 함",
+      "primary_competency_hint": "risk_awareness"
+    },
+    {
+      "id": "rp_manager_blocks_reporting",
+      "topic": "reporting",
+      "title": "상사의 보고 금지 지시",
+      "trigger": "팀장이 '외부·상위에 알리지 말고 내부에서만 해결하자'며 공식 보고를 하지 말라고 지시함",
+      "conflict": "상사의 지시를 따라 내부적으로 신속 처리하려는 압력 vs 이슈 인지 시 지체 없이 공식 보고해야 한다는 정책(보고 생략 금지)",
+      "primary_competency_hint": "escalation"
     }
   ]
 }

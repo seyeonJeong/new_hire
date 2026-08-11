@@ -222,3 +222,113 @@ def build_repair_user_prompt(
 - scenario_id는 "{scenario_id}" 로 유지하세요.
 - subtopic은 "{subtopic["id"]}" 로 유지하세요.
 """
+
+
+TOPIC_ID_PREFIX = {
+    "data_sharing": "ds",
+    "expense_approval": "ea",
+    "reporting": "rp",
+}
+
+COMPETENCY_HINTS = (
+    "risk_awareness",
+    "policy_application",
+    "escalation",
+    "communication",
+)
+
+
+SUBTOPIC_SYSTEM_PROMPT = """\
+당신은 대기업 SI 신입사원 온보딩용 상황판단검사(SJT) 세부 토픽 설계자입니다.
+주어진 가상 회사 내규를 읽고, 아직 카탈로그에 없는 세부 토픽을 JSON으로 제안합니다.
+
+규칙:
+1. 한국어로 작성한다.
+2. 내규에 실제로 적힌 의무·금지·예외·보고 경로만 근거로 한다. 없는 조항을 지어내지 않는다.
+3. 각 토픽은 신입이 현장에서 망설일 Trigger와 업무상 갈등(conflict)을 가진다.
+4. 이미 제공된 기존 토픽의 title/trigger와 의미상 겹치지 않는다. (표현만 바꾼 중복 금지)
+5. primary_competency_hint는 risk_awareness | policy_application | escalation | communication 중 하나.
+6. id는 지정된 접두사 + 소문자 스네이크케이스 (예: ds_masking_before_send).
+7. JSON만 출력한다. 마크다운 코드블록이나 해설을 붙이지 않는다.
+
+출력 형식:
+{
+  "subtopics": [
+    {
+      "id": "ds_example_id",
+      "topic": "data_sharing",
+      "title": "짧은 제목",
+      "trigger": "상황을 촉발하는 사건",
+      "conflict": "가치 A vs 가치 B",
+      "primary_competency_hint": "policy_application"
+    }
+  ]
+}
+"""
+
+
+def build_subtopic_user_prompt(
+    *,
+    organization: dict[str, Any],
+    topic: str,
+    policy_id: str,
+    policy_title: str,
+    policy_text: str,
+    existing_subtopics: list[dict[str, Any]],
+    count: int,
+    id_prefix: str,
+) -> str:
+    org_block = {
+        "id": organization["organization_id"],
+        "name": organization["name"],
+        "industry": organization["industry"],
+        "department": organization["department"],
+        "target_role": organization["target_role"],
+    }
+    existing_brief = [
+        {
+            "id": s.get("id"),
+            "title": s.get("title"),
+            "trigger": s.get("trigger"),
+            "conflict": s.get("conflict"),
+        }
+        for s in existing_subtopics
+        if s.get("topic") == topic
+    ]
+    schema_hint = {
+        "subtopics": [
+            {
+                "id": f"{id_prefix}_snake_case_id",
+                "topic": topic,
+                "title": "...",
+                "trigger": "...",
+                "conflict": "...",
+                "primary_competency_hint": " | ".join(COMPETENCY_HINTS),
+            }
+        ]
+    }
+    return f"""\
+## 조직
+{json.dumps(org_block, ensure_ascii=False, indent=2)}
+
+## 생성 조건
+- topic: {topic}
+- policy_id: {policy_id}
+- policy_title: {policy_title}
+- 요청 개수: {count}
+- id 접두사: {id_prefix}_ (반드시 이 접두사로 시작, 소문자 스네이크케이스)
+- primary_competency_hint 허용값: {", ".join(COMPETENCY_HINTS)}
+
+## 기존 세부 토픽 (겹치지 말 것)
+{json.dumps(existing_brief, ensure_ascii=False, indent=2)}
+
+## 내규 전문 ({policy_id})
+{policy_text}
+
+## 출력 JSON 스키마 힌트
+{json.dumps(schema_hint, ensure_ascii=False, indent=2)}
+
+위 내규에서 아직 기존 토픽이 다루지 않은 세부 상황을 {count}개 뽑아 JSON으로 작성하세요.
+title·trigger가 기존 항목과 비슷하면 탈락입니다. 다른 조항·다른 압력을 쓰세요.
+모든 항목의 topic 값은 "{topic}" 으로 고정하세요.
+"""

@@ -19,6 +19,7 @@ dependencies = [
 
 [project.scripts]
 newhire-generate = "newhire.generate:main"
+newhire-generate-subtopics = "newhire.generate_subtopics:main"
 newhire-validate = "newhire.validate:main"
 newhire-repair = "newhire.repair:main"
 newhire-api = "newhire.api:run"
