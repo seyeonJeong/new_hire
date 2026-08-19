@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import {
   fetchEvaluation,
+  retryEvaluation,
   startQuizPack,
   submitChoice,
   type AttemptRecord,
@@ -44,6 +45,29 @@ function canRevealAgent(
   return true
 }
 
+function agentProgress(
+  attempts: AttemptRecord[],
+  evalStatuses: Record<string, EvaluationStatus>,
+): { done: number; total: number } {
+  const ids = attempts
+    .map((a) => a.result.evaluation_id)
+    .filter((id): id is string => Boolean(id))
+  const done = ids.filter((id) => isEvalTerminal(evalStatuses[id]?.status)).length
+  return { done, total: ids.length }
+}
+
+function statusLabel(
+  reveal: boolean,
+  agent: EvaluationStatus | null | undefined,
+): { text: string; kind: 'wait' | 'run' | 'ok' | 'fail' | 'none' } {
+  if (!agent) return { text: 'AI 없음', kind: 'none' }
+  if (!reveal) return { text: '대기', kind: 'wait' }
+  if (agent.status === 'done') return { text: '완료', kind: 'ok' }
+  if (agent.status === 'error') return { text: '실패', kind: 'fail' }
+  if (agent.status === 'running') return { text: '분석 중', kind: 'run' }
+  return { text: '대기', kind: 'wait' }
+}
+
 export default function App() {
   const [phase, setPhase] = useState<Phase>('loading')
   const [pack, setPack] = useState<ScenarioNext[]>([])
@@ -54,6 +78,7 @@ export default function App() {
   const [attempts, setAttempts] = useState<AttemptRecord[]>([])
   const [evalStatuses, setEvalStatuses] = useState<Record<string, EvaluationStatus>>({})
   const [error, setError] = useState<string | null>(null)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
   const [animKey, setAnimKey] = useState(0)
   const bootIdRef = useRef(0)
 
@@ -83,6 +108,7 @@ export default function App() {
     setResult(null)
     setSelected(null)
     setError(null)
+    setRetryingId(null)
     setPhase('loading')
     try {
       const started = await startQuizPack()
@@ -109,10 +135,13 @@ export default function App() {
       .filter((id): id is string => Boolean(id))
     if (ids.length === 0) return
 
+    const pending = ids.filter((id) => !isEvalTerminal(evalStatuses[id]?.status))
+    if (pending.length === 0) return
+
     let cancelled = false
 
     async function poll() {
-      for (const id of ids) {
+      for (const id of pending) {
         try {
           const status = await fetchEvaluation(id)
           if (cancelled) return
@@ -140,7 +169,7 @@ export default function App() {
       cancelled = true
       window.clearInterval(timer)
     }
-  }, [attempts])
+  }, [attempts, evalStatuses])
 
   async function onSubmit() {
     if (!scenario || !selected) return
@@ -168,6 +197,25 @@ export default function App() {
     }
   }
 
+  async function onRetryAgent(evaluationId: string) {
+    setRetryingId(evaluationId)
+    try {
+      const status = await retryEvaluation(evaluationId)
+      setEvalStatuses((prev) => ({ ...prev, [evaluationId]: status }))
+    } catch (err) {
+      setEvalStatuses((prev) => ({
+        ...prev,
+        [evaluationId]: {
+          ...(prev[evaluationId] as EvaluationStatus),
+          status: 'error',
+          error: err instanceof Error ? err.message : '다시 시도에 실패했습니다.',
+        },
+      }))
+    } finally {
+      setRetryingId(null)
+    }
+  }
+
   function goNextOrSummary() {
     const nextIndex = packIndex + 1
     if (nextIndex >= pack.length) {
@@ -178,14 +226,10 @@ export default function App() {
   }
 
   const correctCount = attempts.filter((a) => a.result.is_correct).length
-  const agentPending = attempts.some((a) => {
-    const id = a.result.evaluation_id
-    if (!id) return false
-    const status = evalStatuses[id]?.status
-    return !status || status === 'pending' || status === 'running'
-  })
+  const progress = agentProgress(attempts, evalStatuses)
   const quizTotal = pack.length || 5
   const quizNumber = packIndex + 1
+  const allAgentDone = progress.total > 0 && progress.done === progress.total
 
   return (
     <div className="page">
@@ -213,8 +257,22 @@ export default function App() {
             <p className="feedback-body">
               즉시 채점 결과: {correctCount} / {attempts.length} 정답
             </p>
-            {agentPending && (
-              <p className="feedback-meta">AI 코치 분석을 뒤에서 정리하는 중…</p>
+            {progress.total > 0 && (
+              <div className="agent-progress">
+                <p className="feedback-meta">
+                  {allAgentDone
+                    ? 'AI 코치 분석이 모두 완료되었습니다'
+                    : `AI 코치 분석 ${progress.done} / ${progress.total} 완료`}
+                </p>
+                <div className="progress-track" aria-hidden="true">
+                  <div
+                    className="progress-fill"
+                    style={{
+                      width: `${progress.total ? (progress.done / progress.total) * 100 : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
             )}
 
             <div className="summary-list">
@@ -222,6 +280,7 @@ export default function App() {
                 const evalId = attempt.result.evaluation_id
                 const agent = evalId ? evalStatuses[evalId] : null
                 const reveal = canRevealAgent(attempts, index, evalStatuses)
+                const badge = statusLabel(reveal, agent)
                 const agentDone = reveal && agent?.status === 'done' && agent.feedback
                 const agentError = reveal && agent?.status === 'error'
                 const agentWaiting =
@@ -238,6 +297,7 @@ export default function App() {
                       <span className={attempt.result.is_correct ? 'ok' : 'bad'}>
                         {attempt.result.is_correct ? ' 정답' : ' 오답'}
                       </span>
+                      <span className={`status-pill is-${badge.kind}`}>{badge.text}</span>
                     </h3>
                     <p className="summary-q">{attempt.scenario.question}</p>
 
@@ -245,12 +305,24 @@ export default function App() {
                     {agentWaiting && (
                       <p className="feedback-meta">
                         {reveal
-                          ? 'AI 분석 중…'
+                          ? 'AI가 내규를 기준으로 분석하는 중…'
                           : '앞 문제부터 순서대로 분석 결과를 표시합니다'}
                       </p>
                     )}
                     {agentError && (
-                      <p className="error-text">AI 분석 실패: {agent?.error ?? 'unknown'}</p>
+                      <div className="retry-block">
+                        <p className="error-text">AI 분석 실패: {agent?.error ?? 'unknown'}</p>
+                        {evalId && (
+                          <button
+                            type="button"
+                            className="btn ghost"
+                            disabled={retryingId === evalId}
+                            onClick={() => void onRetryAgent(evalId)}
+                          >
+                            {retryingId === evalId ? '다시 시도 중…' : '분석 다시 시도'}
+                          </button>
+                        )}
+                      </div>
                     )}
                     {agentDone && agent.feedback && (
                       <div className="agent-block">
@@ -383,7 +455,14 @@ export default function App() {
               </section>
             )}
 
-            {error && phase === 'ready' && <p className="status error-text">{error}</p>}
+            {error && phase === 'ready' && (
+              <div className="inline-error">
+                <p className="status error-text">{error}</p>
+                <button type="button" className="btn ghost" onClick={() => void onSubmit()}>
+                  다시 제출
+                </button>
+              </div>
+            )}
           </>
         )}
       </main>

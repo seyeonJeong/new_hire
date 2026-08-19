@@ -96,3 +96,19 @@ def start_agent_evaluation(
             )
 
     threading.Thread(target=_run, daemon=True, name=f"eval-{job.evaluation_id[:8]}").start()
+
+
+def retry_agent_evaluation(
+    jobs: EvaluationJobStore,
+    job: EvaluationJob,
+    scenario: Scenario,
+) -> EvaluationJob:
+    jobs.update(
+        job.evaluation_id,
+        status="pending",
+        error=None,
+        agent_label=None,
+        feedback=None,
+    )
+    start_agent_evaluation(jobs, job, scenario, job.choice_id)  # type: ignore[arg-type]
+    return job

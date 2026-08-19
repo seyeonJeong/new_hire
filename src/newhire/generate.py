@@ -80,6 +80,34 @@ def make_scenario_id(topic: str, index: int) -> str:
     return f"OO-AX-{abbrev}-{index:03d}"
 
 
+def _topic_index_from_id(scenario_id: str) -> int:
+    try:
+        return int(scenario_id.rsplit("-", 1)[-1])
+    except ValueError:
+        return 0
+
+
+def build_missing_plan(catalog: dict[str, Any], existing_path: Path) -> list[dict[str, Any]]:
+    from newhire.validate import load_scenarios
+
+    existing = load_scenarios(existing_path)
+    used = {s.subtopic for s in existing}
+    next_n: dict[str, int] = {}
+    for scenario in existing:
+        next_n[scenario.topic] = max(next_n.get(scenario.topic, 0), _topic_index_from_id(scenario.scenario_id))
+
+    plan: list[dict[str, Any]] = []
+    for sub in catalog.get("subtopics", []):
+        if sub["id"] in used:
+            continue
+        topic = sub["topic"]
+        next_n[topic] = next_n.get(topic, 0) + 1
+        plan.append({"topic": topic, "subtopic": sub, "n": next_n[topic]})
+    if not plan:
+        raise SystemExit(f"No missing subtopics vs {existing_path}")
+    return plan
+
+
 def build_batch_plan(
     catalog: dict[str, Any],
     *,
@@ -266,6 +294,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Output path (.json for 1, .jsonl for batch)",
     )
+    parser.add_argument(
+        "--missing-from",
+        type=Path,
+        default=None,
+        help="Generate only catalog subtopics not already in this JSONL",
+    )
     return parser
 
 
@@ -293,15 +327,23 @@ def main(argv: list[str] | None = None) -> None:
     # Default: one data_sharing if nothing specified
     topic = args.topic
     count = args.count
-    if topic is None and count is None and args.subtopic is None:
+    if (
+        topic is None
+        and count is None
+        and args.subtopic is None
+        and args.missing_from is None
+    ):
         topic = "data_sharing"
 
-    plan = build_batch_plan(
-        catalog,
-        count=count,
-        topic=topic,
-        subtopic_id=args.subtopic,
-    )
+    if args.missing_from:
+        plan = build_missing_plan(catalog, args.missing_from.resolve())
+    else:
+        plan = build_batch_plan(
+            catalog,
+            count=count,
+            topic=topic,
+            subtopic_id=args.subtopic,
+        )
 
     policy_cache: dict[str, tuple[dict[str, Any], str]] = {}
     client = OpenAI(api_key=api_key)

@@ -19,7 +19,7 @@ from newhire.api_schemas import (
     SubmitRequest,
     SubmitResponse,
 )
-from newhire.eval_jobs import EvaluationJobStore, start_agent_evaluation
+from newhire.eval_jobs import EvaluationJobStore, retry_agent_evaluation, start_agent_evaluation
 from newhire.schema import ChoiceLabel, Scenario
 from newhire.store import ScenarioStore
 
@@ -31,7 +31,7 @@ DEFAULT_SCENARIO_FILE = (
     / "data"
     / "oo_soft"
     / "generated"
-    / "batch_20260728T014723Z.repaired.jsonl"
+    / "batch_current.repaired.jsonl"
 )
 
 
@@ -154,6 +154,29 @@ def create_app(store: ScenarioStore | None = None) -> FastAPI:
             agent_label=job.agent_label,
             feedback=job.feedback,
             error=job.error,
+        )
+
+    @app.post("/evaluations/{evaluation_id}/retry", response_model=EvaluationStatusResponse)
+    def retry_evaluation(evaluation_id: str) -> EvaluationStatusResponse:
+        job = jobs.get(evaluation_id)
+        if job is None:
+            raise HTTPException(status_code=404, detail="Evaluation not found")
+        if job.status == "running":
+            raise HTTPException(status_code=409, detail="Evaluation already running")
+        scenario = scenario_store.get(job.scenario_id)
+        if scenario is None:
+            raise HTTPException(status_code=404, detail="Scenario not found")
+        retry_agent_evaluation(jobs, job, scenario)
+        refreshed = jobs.get(evaluation_id)
+        assert refreshed is not None
+        return EvaluationStatusResponse(
+            evaluation_id=refreshed.evaluation_id,
+            scenario_id=refreshed.scenario_id,
+            choice_id=refreshed.choice_id,  # type: ignore[arg-type]
+            status=refreshed.status,
+            agent_label=refreshed.agent_label,
+            feedback=refreshed.feedback,
+            error=refreshed.error,
         )
 
     return app

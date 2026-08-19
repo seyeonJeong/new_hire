@@ -75,10 +75,21 @@ async function readError(res: Response): Promise<string> {
   }
 }
 
+function connectionHint(err: unknown): string {
+  if (err instanceof TypeError) {
+    return '서버에 연결하지 못했습니다. API(8000)와 웹(5173)이 켜져 있는지 확인하세요.'
+  }
+  return err instanceof Error ? err.message : '요청에 실패했습니다.'
+}
+
 export async function startQuizPack(): Promise<QuizStart> {
-  const res = await fetch('/quiz/start', { method: 'POST' })
-  if (!res.ok) throw new Error(await readError(res))
-  return res.json()
+  try {
+    const res = await fetch('/quiz/start', { method: 'POST' })
+    if (!res.ok) throw new Error(await readError(res))
+    return res.json()
+  } catch (err) {
+    throw new Error(connectionHint(err))
+  }
 }
 
 export async function submitChoice(
@@ -96,6 +107,14 @@ export async function submitChoice(
 
 export async function fetchEvaluation(evaluationId: string): Promise<EvaluationStatus> {
   const res = await fetch(`/evaluations/${encodeURIComponent(evaluationId)}`)
+  if (!res.ok) throw new Error(await readError(res))
+  return res.json()
+}
+
+export async function retryEvaluation(evaluationId: string): Promise<EvaluationStatus> {
+  const res = await fetch(`/evaluations/${encodeURIComponent(evaluationId)}/retry`, {
+    method: 'POST',
+  })
   if (!res.ok) throw new Error(await readError(res))
   return res.json()
 }
