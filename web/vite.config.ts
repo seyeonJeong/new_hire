@@ -9,6 +9,7 @@ export default defineConfig({
       '/scenarios': 'http://127.0.0.1:8000',
       '/evaluations': 'http://127.0.0.1:8000',
       '/quiz': 'http://127.0.0.1:8000',
+      '/open-response': 'http://127.0.0.1:8000',
       '/health': 'http://127.0.0.1:8000',
     },
   },

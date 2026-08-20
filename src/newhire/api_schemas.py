@@ -43,6 +43,13 @@ class SubmitRequest(BaseModel):
     choice_id: Literal["A", "B", "C"]
 
 
+class CriterionVerdictPublic(BaseModel):
+    criterion: str
+    kind: Literal["required", "prohibited"]
+    met: bool
+    evidence: str = ""
+
+
 class Feedback(BaseModel):
     selected: str
     correct: str
@@ -52,6 +59,7 @@ class Feedback(BaseModel):
     policy_grounds: list[str] = Field(default_factory=list)
     followed: list[str] = Field(default_factory=list)
     missed: list[str] = Field(default_factory=list)
+    verdicts: list[CriterionVerdictPublic] = Field(default_factory=list)
     analysis_summary: str | None = None
     source: Literal["agent", "static"] = "static"
 
@@ -64,7 +72,7 @@ class SubmitResponse(BaseModel):
     selected_label: Literal["unsafe", "partial", "correct"]
     feedback: Feedback
     evaluation_id: str | None = None
-    agent_label: Literal["unsafe", "partial", "correct"] | None = None
+    agent_label: Literal["unsafe", "over_restrictive", "partial", "correct"] | None = None
     quiz_index: int | None = None
     quiz_total: int | None = None
 
@@ -72,8 +80,44 @@ class SubmitResponse(BaseModel):
 class EvaluationStatusResponse(BaseModel):
     evaluation_id: str
     scenario_id: str
-    choice_id: Literal["A", "B", "C"]
+    choice_id: str = ""
+    kind: Literal["mcq", "open"] = "mcq"
     status: Literal["pending", "running", "done", "error"]
-    agent_label: Literal["unsafe", "partial", "correct"] | None = None
+    agent_label: Literal["unsafe", "over_restrictive", "partial", "correct"] | None = None
     feedback: Feedback | None = None
     error: str | None = None
+
+
+class OpenStartRequest(BaseModel):
+    exclude_ids: list[str] = Field(default_factory=list)
+
+
+class OpenChatMessage(BaseModel):
+    speaker: Literal["trainee", "counterpart"]
+    text: str
+
+
+class OpenSessionResponse(BaseModel):
+    session_id: str
+    scenario_id: str
+    organization: PublicOrganization
+    topic: str
+    subtopic: str
+    difficulty: str
+    scenario: str
+    question: str
+    opening: str
+    messages: list[OpenChatMessage]
+    trainee_turns: int
+    max_trainee_turns: int = 3
+    evaluation_id: str | None = None
+
+
+class OpenMessageRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+
+
+class OpenEvaluateResponse(BaseModel):
+    session_id: str
+    evaluation_id: str
+    status: Literal["pending", "running", "done", "error"]

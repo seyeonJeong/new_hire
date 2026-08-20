@@ -30,6 +30,35 @@ SYSTEM_PROMPT = """\
 """
 
 
+STANCE_GUIDES = {
+    "refuse": (
+        "이 문항은 상대의 요구가 명백한 규정 위반인 경우입니다.\n"
+        "correct 보기: 요구를 정중히 거절하고 올바른 절차를 안내한다.\n"
+        "required_actions: 전송/결제를 보류하는 행위, 올바른 대안 경로를 안내하는 행위 등 구체적 문장으로 적는다.\n"
+        "unsafe 보기: 요구를 그대로 수용한다."
+    ),
+    "redirect": (
+        "이 문항은 상대의 업무 니즈 자체는 정당하지만, 제안한 수단/경로가 부적절한 경우입니다.\n"
+        "correct 보기: 상대의 업무 니즈를 인정하면서 올바른 수단(공식 채널, 마스킹, 대체 승인자 경로 등)으로 전환한다.\n"
+        "required_actions: 상대의 정당한 요청에 대해 올바른 수단으로 처리하겠다고 안내하는 행위, 부적절한 수단을 사용하지 않는 행위 등 구체적 문장으로 적는다.\n"
+        "unsafe 보기: 부적절한 수단을 그대로 수용한다.\n"
+        "partial 보기: 상대의 니즈를 무시하고 대안 없이 일방적으로 거부하거나, 수단만 바꾸되 핵심 절차를 빠뜨린다.\n"
+        "prohibited_actions: 상대의 정당한 업무 요청에 대안을 제시하지 않고 일방적으로 거절하는 행위를 포함한다."
+    ),
+    "comply": (
+        "이 문항은 요청 내용도 수단도 적절한 정상 업무입니다.\n"
+        "correct 보기: 요청에 따라 정상적으로 처리하면서 필요한 기록/절차를 이행한다.\n"
+        "required_actions: 요청받은 업무를 정상적으로 수행하는 행위, 전달/결제 기록을 남기는 행위 등 구체적 문장으로 적는다.\n"
+        "unsafe 보기: 불필요하게 거부하거나 과도한 절차를 요구해 정상 업무를 지연시킨다.\n"
+        "prohibited_actions: 정당한 업무 요청을 불필요하게 지연·거부하는 행위를 포함한다."
+    ),
+}
+
+
+def _stance_guide(stance: str) -> str:
+    return STANCE_GUIDES.get(stance, STANCE_GUIDES["refuse"])
+
+
 DIFFICULTY_HINTS = {
     "easy": "압력은 약하게, 오답은 비교적 분명하게. 그래도 correct만 교과서 문장으로 쓰지 말 것.",
     "medium": (
@@ -103,6 +132,10 @@ def build_user_prompt(
 - trigger: {subtopic["trigger"]}
 - conflict: {subtopic["conflict"]}
 - competency hint: {subtopic.get("primary_competency_hint", "")}
+- expected_stance: {subtopic.get("expected_stance", "refuse")}
+
+## expected_stance 설계 지침
+{_stance_guide(subtopic.get("expected_stance", "refuse"))}
 
 ## 생성 조건
 - topic: {topic}

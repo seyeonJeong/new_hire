@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 from collections import defaultdict
 from pathlib import Path
 
@@ -8,7 +9,7 @@ from newhire.validate import load_scenarios
 
 
 def select_balanced(scenarios: list[Scenario], limit: int) -> list[Scenario]:
-    """Pick up to `limit` items with mixed correct_choice_id, then queue in stable order."""
+    """Pick up to `limit` items with mixed correct_choice_id, shuffled each call."""
     if limit >= len(scenarios):
         return list(scenarios)
 
@@ -17,6 +18,9 @@ def select_balanced(scenarios: list[Scenario], limit: int) -> list[Scenario]:
         by_answer[scenario.correct_choice_id].append(scenario)
 
     order = ["A", "B", "C"]
+    for key in order:
+        random.shuffle(by_answer[key])
+
     selected: list[Scenario] = []
     used: set[str] = set()
     idx = {key: 0 for key in order}
@@ -48,8 +52,7 @@ def select_balanced(scenarios: list[Scenario], limit: int) -> list[Scenario]:
             if len(selected) >= limit:
                 break
 
-    # FIFO quiz order: stable by scenario_id (1→5처럼 앞에서부터)
-    selected.sort(key=lambda s: s.scenario_id)
+    random.shuffle(selected)
     return selected
 
 
@@ -95,6 +98,13 @@ class ScenarioStore:
 
     def get(self, scenario_id: str) -> Scenario | None:
         return self._by_id.get(scenario_id)
+
+    def pick_open(self, exclude_ids: set[str] | None = None) -> Scenario:
+        skip = exclude_ids or set()
+        pool = [s for s in self._all if s.scenario_id not in skip]
+        if not pool:
+            pool = list(self._all)
+        return random.choice(pool)
 
     @property
     def count(self) -> int:

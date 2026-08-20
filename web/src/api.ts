@@ -24,6 +24,13 @@ export type QuizStart = {
   scenarios: ScenarioNext[]
 }
 
+export type CriterionVerdict = {
+  criterion: string
+  kind: 'required' | 'prohibited'
+  met: boolean
+  evidence?: string
+}
+
 export type FeedbackPayload = {
   selected: string
   correct: string
@@ -33,6 +40,7 @@ export type FeedbackPayload = {
   policy_grounds?: string[]
   followed?: string[]
   missed?: string[]
+  verdicts?: CriterionVerdict[]
   analysis_summary?: string | null
   source?: 'agent' | 'static'
 }
@@ -53,7 +61,8 @@ export type SubmitResult = {
 export type EvaluationStatus = {
   evaluation_id: string
   scenario_id: string
-  choice_id: 'A' | 'B' | 'C'
+  choice_id: string
+  kind?: 'mcq' | 'open'
   status: 'pending' | 'running' | 'done' | 'error'
   agent_label?: 'unsafe' | 'partial' | 'correct' | null
   feedback?: FeedbackPayload | null
@@ -113,6 +122,71 @@ export async function fetchEvaluation(evaluationId: string): Promise<EvaluationS
 
 export async function retryEvaluation(evaluationId: string): Promise<EvaluationStatus> {
   const res = await fetch(`/evaluations/${encodeURIComponent(evaluationId)}/retry`, {
+    method: 'POST',
+  })
+  if (!res.ok) throw new Error(await readError(res))
+  return res.json()
+}
+
+export type OpenChatMessage = {
+  speaker: 'trainee' | 'counterpart'
+  text: string
+}
+
+export type OpenSession = {
+  session_id: string
+  scenario_id: string
+  organization: {
+    name: string
+    department: string
+  }
+  topic: string
+  subtopic: string
+  difficulty: string
+  scenario: string
+  question: string
+  opening: string
+  messages: OpenChatMessage[]
+  trainee_turns: number
+  max_trainee_turns: number
+  evaluation_id?: string | null
+}
+
+export type OpenEvaluateResult = {
+  session_id: string
+  evaluation_id: string
+  status: 'pending' | 'running' | 'done' | 'error'
+}
+
+export async function startOpenResponse(excludeIds: string[]): Promise<OpenSession> {
+  try {
+    const res = await fetch('/open-response/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ exclude_ids: excludeIds }),
+    })
+    if (!res.ok) throw new Error(await readError(res))
+    return res.json()
+  } catch (err) {
+    throw new Error(connectionHint(err))
+  }
+}
+
+export async function sendOpenMessage(
+  sessionId: string,
+  text: string,
+): Promise<OpenSession> {
+  const res = await fetch(`/open-response/${encodeURIComponent(sessionId)}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (!res.ok) throw new Error(await readError(res))
+  return res.json()
+}
+
+export async function evaluateOpenSession(sessionId: string): Promise<OpenEvaluateResult> {
+  const res = await fetch(`/open-response/${encodeURIComponent(sessionId)}/evaluate`, {
     method: 'POST',
   })
   if (!res.ok) throw new Error(await readError(res))

@@ -1,17 +1,32 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  evaluateOpenSession,
   fetchEvaluation,
   retryEvaluation,
+  sendOpenMessage,
+  startOpenResponse,
   startQuizPack,
   submitChoice,
   type AttemptRecord,
+  type CriterionVerdict,
   type EvaluationStatus,
+  type OpenSession,
   type ScenarioNext,
   type SubmitResult,
 } from './api'
 import './index.css'
 
-type Phase = 'loading' | 'ready' | 'submitting' | 'feedback' | 'summary' | 'error'
+type Phase =
+  | 'home'
+  | 'loading'
+  | 'ready'
+  | 'submitting'
+  | 'feedback'
+  | 'summary'
+  | 'open'
+  | 'error'
+
+type EvalMode = 'mcq' | 'open'
 
 const TOPIC_LABEL: Record<string, string> = {
   data_sharing: '자료 공유',
@@ -68,8 +83,47 @@ function statusLabel(
   return { text: '대기', kind: 'wait' }
 }
 
+const OPEN_LABEL: Record<string, string> = {
+  unsafe: '위험',
+  over_restrictive: '과잉 거부',
+  partial: '부분 충족',
+  correct: '적합',
+}
+
+function RubricList({ verdicts }: { verdicts: CriterionVerdict[] }) {
+  if (!verdicts.length) return null
+  return (
+    <ul className="rubric-list">
+      {verdicts.map((item) => {
+        const ok = item.kind === 'required' ? item.met : !item.met
+        const flag =
+          item.kind === 'required'
+            ? item.met
+              ? '필수 · 함'
+              : '필수 · 안 함'
+            : item.met
+              ? '금지 · 함'
+              : '금지 · 안 함'
+        return (
+          <li
+            key={`${item.kind}-${item.criterion}`}
+            className={ok ? 'is-met' : 'is-unmet'}
+          >
+            <span className="rubric-flag">{flag}</span>
+            <span>{item.criterion}</span>
+            {item.evidence ? (
+              <span className="rubric-evidence">{item.evidence}</span>
+            ) : null}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 export default function App() {
-  const [phase, setPhase] = useState<Phase>('loading')
+  const [phase, setPhase] = useState<Phase>('home')
+  const [mode, setMode] = useState<EvalMode | null>(null)
   const [pack, setPack] = useState<ScenarioNext[]>([])
   const [packIndex, setPackIndex] = useState(0)
   const [scenario, setScenario] = useState<ScenarioNext | null>(null)
@@ -80,6 +134,10 @@ export default function App() {
   const [error, setError] = useState<string | null>(null)
   const [retryingId, setRetryingId] = useState<string | null>(null)
   const [animKey, setAnimKey] = useState(0)
+  const [openSession, setOpenSession] = useState<OpenSession | null>(null)
+  const [openDraft, setOpenDraft] = useState('')
+  const [openBusy, setOpenBusy] = useState(false)
+  const [openError, setOpenError] = useState<string | null>(null)
   const bootIdRef = useRef(0)
 
   function showAt(list: ScenarioNext[], index: number) {
@@ -98,8 +156,7 @@ export default function App() {
     setPhase('ready')
   }
 
-  async function bootQuiz() {
-    const bootId = ++bootIdRef.current
+  function clearRun() {
     setAttempts([])
     setEvalStatuses({})
     setPack([])
@@ -109,6 +166,24 @@ export default function App() {
     setSelected(null)
     setError(null)
     setRetryingId(null)
+    setOpenSession(null)
+    setOpenDraft('')
+    setOpenBusy(false)
+    setOpenError(null)
+  }
+
+  function goHome() {
+    bootIdRef.current += 1
+    clearRun()
+    setMode(null)
+    setAnimKey((k) => k + 1)
+    setPhase('home')
+  }
+
+  async function bootQuiz() {
+    const bootId = ++bootIdRef.current
+    clearRun()
+    setMode('mcq')
     setPhase('loading')
     try {
       const started = await startQuizPack()
@@ -125,14 +200,30 @@ export default function App() {
     }
   }
 
-  useEffect(() => {
-    void bootQuiz()
-  }, [])
+  async function bootOpen() {
+    const bootId = ++bootIdRef.current
+    clearRun()
+    setMode('open')
+    setPhase('loading')
+    try {
+      const session = await startOpenResponse([])
+      if (bootId !== bootIdRef.current) return
+      setOpenSession(session)
+      setOpenDraft('')
+      setAnimKey((k) => k + 1)
+      setPhase('open')
+    } catch (err) {
+      if (bootId !== bootIdRef.current) return
+      setError(err instanceof Error ? err.message : '주관식을 시작하지 못했습니다.')
+      setPhase('error')
+    }
+  }
 
   useEffect(() => {
-    const ids = attempts
-      .map((a) => a.result.evaluation_id)
-      .filter((id): id is string => Boolean(id))
+    const ids = [
+      ...attempts.map((a) => a.result.evaluation_id),
+      openSession?.evaluation_id,
+    ].filter((id): id is string => Boolean(id))
     if (ids.length === 0) return
 
     const pending = ids.filter((id) => !isEvalTerminal(evalStatuses[id]?.status))
@@ -169,7 +260,7 @@ export default function App() {
       cancelled = true
       window.clearInterval(timer)
     }
-  }, [attempts, evalStatuses])
+  }, [attempts, evalStatuses, openSession?.evaluation_id])
 
   async function onSubmit() {
     if (!scenario || !selected) return
@@ -225,11 +316,62 @@ export default function App() {
     showAt(pack, nextIndex)
   }
 
+  async function onSendOpen() {
+    if (!openSession || openBusy) return
+    const text = openDraft.trim()
+    if (!text) return
+    setOpenBusy(true)
+    setOpenError(null)
+    try {
+      const next = await sendOpenMessage(openSession.session_id, text)
+      setOpenSession(next)
+      setOpenDraft('')
+    } catch (err) {
+      setOpenError(err instanceof Error ? err.message : '메시지를 보내지 못했습니다.')
+    } finally {
+      setOpenBusy(false)
+    }
+  }
+
+  async function onEvaluateOpen() {
+    if (!openSession || openBusy) return
+    setOpenBusy(true)
+    setOpenError(null)
+    try {
+      const started = await evaluateOpenSession(openSession.session_id)
+      setOpenSession((prev) =>
+        prev ? { ...prev, evaluation_id: started.evaluation_id } : prev,
+      )
+      setEvalStatuses((prev) => ({
+        ...prev,
+        [started.evaluation_id]: {
+          evaluation_id: started.evaluation_id,
+          scenario_id: openSession.scenario_id,
+          choice_id: '',
+          kind: 'open',
+          status: started.status,
+        },
+      }))
+    } catch (err) {
+      setOpenError(err instanceof Error ? err.message : '평가를 시작하지 못했습니다.')
+    } finally {
+      setOpenBusy(false)
+    }
+  }
+
   const correctCount = attempts.filter((a) => a.result.is_correct).length
   const progress = agentProgress(attempts, evalStatuses)
   const quizTotal = pack.length || 5
   const quizNumber = packIndex + 1
   const allAgentDone = progress.total > 0 && progress.done === progress.total
+  const openEval = openSession?.evaluation_id
+    ? evalStatuses[openSession.evaluation_id]
+    : undefined
+  const openLocked = Boolean(openSession?.evaluation_id)
+  const canSendOpen =
+    Boolean(openSession) &&
+    !openLocked &&
+    (openSession?.trainee_turns ?? 0) < (openSession?.max_trainee_turns ?? 3)
 
   return (
     <div className="page">
@@ -240,14 +382,40 @@ export default function App() {
       </header>
 
       <main className="stage" key={animKey}>
+        {phase === 'home' && (
+          <section className="mode-pick fade-up">
+            <p className="feedback-verdict">평가 방식을 고르세요</p>
+            <p className="feedback-body">00 Soft 내규를 기준으로 신입의 상황 판단을 봅니다.</p>
+            <div className="mode-grid">
+              <button type="button" className="mode-card" onClick={() => void bootQuiz()}>
+                <strong>객관식</strong>
+                <span>상황당 A / B / C 중 하나를 고릅니다. 5문제입니다.</span>
+              </button>
+              <button type="button" className="mode-card" onClick={() => void bootOpen()}>
+                <strong>주관식</strong>
+                <span>상대의 말에 직접 답하고, 상대가 받아칩니다. 내규 항목별로 채점합니다.</span>
+              </button>
+            </div>
+          </section>
+        )}
+
         {phase === 'loading' && <p className="status">문제를 불러오는 중…</p>}
 
         {phase === 'error' && (
           <div className="status-block">
             <p className="status error-text">{error}</p>
-            <button type="button" className="btn primary" onClick={() => void bootQuiz()}>
-              다시 시도
-            </button>
+            <div className="summary-actions">
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => void (mode === 'open' ? bootOpen() : bootQuiz())}
+              >
+                다시 시도
+              </button>
+              <button type="button" className="btn ghost" onClick={goHome}>
+                처음으로
+              </button>
+            </div>
           </div>
         )}
 
@@ -346,10 +514,186 @@ export default function App() {
               })}
             </div>
 
-            <button type="button" className="btn primary" onClick={() => void bootQuiz()}>
-              다시 풀기
-            </button>
+            <div className="summary-actions">
+              <button type="button" className="btn primary" onClick={() => void bootQuiz()}>
+                다시 풀기
+              </button>
+              <button type="button" className="btn ghost" onClick={goHome}>
+                처음으로
+              </button>
+            </div>
           </section>
+        )}
+
+        {phase === 'open' && openSession && (
+          <>
+            <div className="meta-row">
+              <span>상황 대응</span>
+              <span>회사명 : {openSession.organization.name}</span>
+              <span>부서명 : {openSession.organization.department}</span>
+              <span>주제 : {TOPIC_LABEL[openSession.topic] ?? openSession.topic}</span>
+            </div>
+
+            <section className="situation fade-up">
+              <p className="situation-text">{openSession.scenario}</p>
+            </section>
+
+            <section className="quiz fade-up delay-1">
+              <h2 className="question">상대에게 뭐라고 하시겠어요?</h2>
+              <p className="feedback-meta">
+                상대의 요청 내용과 수단을 구분하세요. 요청이 정당하면 올바른 방법으로 처리하는 것도 정답입니다.
+              </p>
+
+              <div className="chat-log" aria-live="polite">
+                {openSession.messages.map((item, index) => (
+                  <div
+                    key={`${item.speaker}-${index}`}
+                    className={`chat-bubble is-${item.speaker}`}
+                  >
+                    <span className="chat-who">
+                      {item.speaker === 'counterpart' ? '상대' : '나'}
+                    </span>
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+
+              {canSendOpen && (
+                <form
+                  className="chat-compose"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    void onSendOpen()
+                  }}
+                >
+                  <label className="sr-only" htmlFor="open-draft">
+                    응답 작성
+                  </label>
+                  <textarea
+                    id="open-draft"
+                    value={openDraft}
+                    disabled={openBusy}
+                    placeholder="상대에게 할 말을 적어 주세요"
+                    onChange={(event) => setOpenDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault()
+                        void onSendOpen()
+                      }
+                    }}
+                  />
+                  <p className="feedback-meta">
+                    {openSession.trainee_turns} / {openSession.max_trainee_turns}번째 대응
+                  </p>
+                  <div className="chat-actions">
+                    <button
+                      type="submit"
+                      className="btn primary"
+                      disabled={openBusy || !openDraft.trim()}
+                    >
+                      {openBusy ? '상대가 답하는 중…' : '보내기'}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      disabled={openBusy || openSession.trainee_turns < 1}
+                      onClick={() => void onEvaluateOpen()}
+                    >
+                      평가받기
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {openLocked && !openEval && (
+                <p className="feedback-meta">평가를 요청했습니다…</p>
+              )}
+              {openLocked &&
+                openEval &&
+                (openEval.status === 'pending' || openEval.status === 'running') && (
+                  <p className="feedback-meta">내규 기준으로 응답을 채점하는 중…</p>
+                )}
+              {openEval?.status === 'error' && (
+                <div className="retry-block">
+                  <p className="error-text">평가 실패: {openEval.error ?? 'unknown'}</p>
+                  {openSession.evaluation_id && (
+                    <button
+                      type="button"
+                      className="btn ghost"
+                      disabled={retryingId === openSession.evaluation_id}
+                      onClick={() => void onRetryAgent(openSession.evaluation_id!)}
+                    >
+                      {retryingId === openSession.evaluation_id
+                        ? '다시 시도 중…'
+                        : '평가 다시 시도'}
+                    </button>
+                  )}
+                </div>
+              )}
+              {openEval?.status === 'done' && openEval.feedback && (
+                <section className="feedback fade-up delay-2">
+                  <p className="feedback-verdict">
+                    {OPEN_LABEL[openEval.agent_label ?? ''] ?? '채점 완료'}
+                  </p>
+                  <p className="feedback-body">{openEval.feedback.selected}</p>
+                  {openEval.feedback.analysis_summary && (
+                    <p className="feedback-meta">분석: {openEval.feedback.analysis_summary}</p>
+                  )}
+                  {(openEval.feedback.policy_grounds?.length ?? 0) > 0 && (
+                    <p className="feedback-meta">
+                      근거: {openEval.feedback.policy_grounds?.join(' · ')}
+                    </p>
+                  )}
+                  <RubricList verdicts={openEval.feedback.verdicts ?? []} />
+                  {openEval.feedback.next_tip && (
+                    <p className="feedback-tip">다음엔: {openEval.feedback.next_tip}</p>
+                  )}
+                </section>
+              )}
+
+              {!openLocked && openSession.trainee_turns >= openSession.max_trainee_turns && (
+                <div className="chat-actions">
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={openBusy}
+                    onClick={() => void onEvaluateOpen()}
+                  >
+                    평가받기
+                  </button>
+                </div>
+              )}
+
+              {openError && <p className="status error-text">{openError}</p>}
+
+              <div className="chat-actions">
+                {openEval?.status === 'done' && (
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={openBusy}
+                    onClick={() => void bootOpen()}
+                  >
+                    다른 상황 대응하기
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn ghost"
+                  onClick={() => {
+                    if (attempts.length > 0) {
+                      setOpenError(null)
+                      setPhase('summary')
+                      return
+                    }
+                    goHome()
+                  }}
+                >
+                  {attempts.length > 0 ? '결과로 돌아가기' : '처음으로'}
+                </button>
+              </div>
+            </section>
+          </>
         )}
 
         {scenario && (phase === 'ready' || phase === 'submitting' || phase === 'feedback') && (

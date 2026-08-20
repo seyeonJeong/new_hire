@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field, ValidationError
 from newhire import agent_prompts as prompts
 from newhire.policy_excerpts import load_policy_excerpts
 from newhire.schema import Scenario
+from newhire.rubric import CriterionVerdict
 
 load_dotenv()
 
@@ -23,7 +24,7 @@ class ResponseAnalysis(BaseModel):
 
 
 class PolicyEvaluation(BaseModel):
-    label: Literal["unsafe", "partial", "correct"]
+    label: Literal["unsafe", "over_restrictive", "partial", "correct"]
     policy_grounds: list[str] = Field(default_factory=list)
     followed: list[str] = Field(default_factory=list)
     missed: list[str] = Field(default_factory=list)
@@ -41,6 +42,7 @@ class AgentEvaluationResult(BaseModel):
     analysis: ResponseAnalysis
     evaluation: PolicyEvaluation
     coach: TrainingCoach
+    verdicts: list[CriterionVerdict] = Field(default_factory=list)
 
 
 class EvalState(TypedDict, total=False):
